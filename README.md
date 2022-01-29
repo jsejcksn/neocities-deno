@@ -5,4 +5,4 @@ Neocities.org API client: written in TypeScript for use with Deno
 
 - Review
 - Refactor
-- Document
+- Document (see generated documentation at [doc.deno.land](https://doc.deno.land/https://deno.land/x/neocities/mod.ts))
