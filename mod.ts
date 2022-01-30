@@ -1,4 +1,4 @@
-import {DateTime} from 'https://unpkg.com/luxon@2.3.0/src/luxon.js';
+import {DateTime} from './deps.ts';
 
 function dateFromRFC2822 (dateTimeString: string): Date {
   return DateTime.fromRFC2822(dateTimeString).toJSDate();
@@ -58,12 +58,12 @@ export class FetchError extends Error {
 }
 
 /**
- * Generate a new API key (token) for your account.
+ * Get the API key (token) for your account.
  * 
  * Read more by navigating to https://neocities.org/settings, then select
  * "Manage Site Settings", then select "API Key".
  */
-export async function generateToken (
+export async function getToken (
   username: string,
   password: string,
 ): Promise<string> {
@@ -74,14 +74,8 @@ export async function generateToken (
 
   const url = new URL(APIRoute.Key, BASE_URL);
   const request = new Request(url.href, {headers});
-  const clone = request.clone();
-  const response = await fetch(request);
-
-  if (!response.ok) {
-    throw await FetchError.createFromJsonMessage({request: clone, response});
-  }
-
-  return (await response.json() as APIResponse<{api_key: string}>).api_key;
+  const response = await fetchResponse(request);
+  return (await response.json() as APIResponse<{ api_key: string; }>).api_key;
 }
 
 function createRequest (
