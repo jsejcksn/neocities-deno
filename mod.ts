@@ -1,10 +1,11 @@
-import {DateTime} from './deps.ts';
+import {assert, DateTime} from './deps.ts';
 
+/** Parses an RFC 2822-formatted datetime string and returns a `Date` */
 function dateFromRFC2822 (dateTimeString: string): Date {
   return DateTime.fromRFC2822(dateTimeString).toJSDate();
 }
 
-const BASE_URL = new URL('https://neocities.org');
+export const API_ORIGIN = 'https://neocities.org';
 
 enum APIRoute {
   Delete = '/api/delete',
@@ -14,8 +15,10 @@ enum APIRoute {
   Upload = '/api/upload',
 }
 
-type APIResponse<T> = T & { result: string; };
-type APIResponseWithMessage<T = unknown> = APIResponse<T> & { message: string; };
+export type APIResponse<T> = T & { result: string; };
+
+export type APIResponseWithMessage<T = unknown> =
+  APIResponse<T> & { message: string; };
 
 type APIErrorResponse = APIResponseWithMessage<{error_type: string}>;
 
@@ -58,7 +61,7 @@ export class FetchError extends Error {
 }
 
 /**
- * Get the API key (token) for your account.
+ * Get the API key (token) for your account
  * 
  * Read more by navigating to https://neocities.org/settings, then select
  * "Manage Site Settings", then select "API Key".
@@ -67,15 +70,17 @@ export async function getToken (
   username: string,
   password: string,
 ): Promise<string> {
-  const headers = new Headers([[
-    'authorization',
-    `Basic ${btoa(`${username}:${password}`)}`,
-  ]]);
-
-  const url = new URL(APIRoute.Key, BASE_URL);
+  const basicAuth = `Basic ${btoa(`${username}:${password}`)}`;
+  const headers = new Headers([['authorization', basicAuth]]);
+  const url = new URL(APIRoute.Key, API_ORIGIN);
   const request = new Request(url.href, {headers});
   const response = await fetchResponse(request);
-  return (await response.json() as APIResponse<{ api_key: string; }>).api_key;
+
+  const token =
+    (await response.json() as APIResponse<{ api_key: string; }>).api_key;
+
+  assert(token, 'Token not found');
+  return token;
 }
 
 function createRequest (
@@ -92,12 +97,8 @@ function createRequest (
     : new Headers(init.headers);
 
   headers.set('authorization', `Bearer ${token}`);
-  const url = new URL(route, BASE_URL);
-
-  if (options instanceof URLSearchParams) {
-    url.search = options.toString();
-  }
-
+  const url = new URL(route, API_ORIGIN);
+  if (options instanceof URLSearchParams) url.search = options.toString();
   return new Request(url.href, {...init, headers});
 }
 
@@ -117,12 +118,12 @@ export type DeleteFilesResponse = APIResponseWithMessage;
 /** Delete one or more paths (files/directories) */
 export async function deleteFiles (
   token: string,
-  fileNames: string[],
+  paths: string[],
 ): Promise<DeleteFilesResponse> {
   const searchParams = new URLSearchParams();
 
-  for (const fileName of fileNames) {
-    searchParams.append('filenames[]', fileName);
+  for (const path of paths) {
+    searchParams.append('filenames[]', path);
   }
 
   const request = createRequest(token, APIRoute.Delete, {
@@ -134,39 +135,48 @@ export async function deleteFiles (
   return response.json() as Promise<DeleteFilesResponse>;
 }
 
-export type InfoResponseRFC2822Dates = {
+type InfoResponseDatesRFC2822 = {
   /** RFC 2822 datetime */
   created_at: string;
+
   /** RFC 2822 datetime */
   last_updated: string | null;
 };
 
-export type InfoResponseNativeDates = {
+export type InfoResponseDatesNative = {
   created_at: Date;
   last_updated: Date | null;
-}
+};
 
-export type InfoResponse<DateInfo = InfoResponseNativeDates> = APIResponse<{
+export type InfoResponse<DateInfo extends (
+  | InfoResponseDatesRFC2822
+  | InfoResponseDatesNative
+) = InfoResponseDatesNative> = APIResponse<{
   info: DateInfo & {
     domain: string | null;
+
     /** integer */
     hits: number;
+
     latest_ipfs_hash: string | null;
     sitename: string;
     tags: string[];
+
     /** integer */
     views: number;
   }
 }>;
 
 /** Get info about your site */
-export async function info (token: string): Promise<InfoResponse>;
+export async function getSiteInfo (token: string): Promise<InfoResponse>;
+
 /** Get info about the named site */
-export async function info (
+export async function getSiteInfo (
   token: string,
   siteName: string,
 ): Promise<InfoResponse>;
-export async function info (
+
+export async function getSiteInfo (
   token: string,
   siteName?: string,
 ): Promise<InfoResponse> {
@@ -176,7 +186,7 @@ export async function info (
 
   const request = createRequest(token, APIRoute.Info, options);
   const response = await fetchResponse(request);
-  const data = await response.json() as InfoResponse<InfoResponseRFC2822Dates>;
+  const data = await response.json() as InfoResponse<InfoResponseDatesRFC2822>;
 
   return {
     ...data,
@@ -190,56 +200,71 @@ export async function info (
   };
 }
 
-export type FSEntryRFC2822Dates = {
+export type FSEntryDatesRFC2822 = {
   /** RFC 2822 datetime */
   updated_at: string;
 };
 
-export type FSEntryNativeDates = {
+export type FSEntryDatesNative = {
   updated_at: Date;
 };
 
-export type FileWithDateInfo<T> = T & {
+export type FileWithDateInfo<DateInfo extends (
+  | FSEntryDatesRFC2822
+  | FSEntryDatesNative
+) = FSEntryDatesNative> = DateInfo & {
   is_directory: false;
   path: string;
   sha1_hash: string | null;
+
   /** integer (bytes) */
   size: number;
 };
 
-export type DirectoryWithDateInfo<T> = T & {
+export type DirectoryWithDateInfo<DateInfo extends (
+  | FSEntryDatesRFC2822
+  | FSEntryDatesNative
+) = FSEntryDatesNative> = DateInfo & {
   is_directory: true;
   path: string;
 };
 
-export type FileOrDirRFC2822Dates = (
-  | FileWithDateInfo<FSEntryRFC2822Dates>
-  | DirectoryWithDateInfo<FSEntryRFC2822Dates>
+export type FileOrDir<DateInfo extends (
+  | FSEntryDatesRFC2822
+  | FSEntryDatesNative
+) = FSEntryDatesNative> = (
+  | FileWithDateInfo<DateInfo>
+  | DirectoryWithDateInfo<DateInfo>
 );
 
-export type FileOrDirNativeDates = (
-  | FileWithDateInfo<FSEntryNativeDates>
-  | DirectoryWithDateInfo<FSEntryNativeDates>
-);
-
-export type ListResponse<FileOrDir = FileOrDirNativeDates> =
-  APIResponse<{ files: FileOrDir[]; }>;
+export type ListResponse<
+  DateInfo extends (
+    | FSEntryDatesRFC2822
+    | FSEntryDatesNative
+  ) = FSEntryDatesNative,
+  FSEntry = FileOrDir<DateInfo>,
+> = APIResponse<{ files: FSEntry[]; }>;
 
 /** Get a list of all files for your site */
-export async function list (token: string): Promise<ListResponse>;
-/** Get a list of files for a path in your site */
-export async function list (token: string, path: string): Promise<ListResponse>;
-export async function list (
+export async function listFiles (token: string): Promise<ListResponse>;
+
+/** Get a list of files in the provided directory path in your site */
+export async function listFiles (
   token: string,
-  path?: string,
+  directoryPath: string,
+): Promise<ListResponse>;
+
+export async function listFiles (
+  token: string,
+  directoryPath?: string,
 ): Promise<ListResponse> {
-  const options = typeof path === 'string' ?
-    new URLSearchParams([['path', path]])
+  const options = typeof directoryPath === 'string' ?
+    new URLSearchParams([['path', directoryPath]])
     : undefined;
 
   const request = createRequest(token, APIRoute.List, options);
   const response = await fetchResponse(request);
-  const data = await response.json() as ListResponse<FileOrDirRFC2822Dates>;
+  const data = await response.json() as ListResponse<FSEntryDatesRFC2822>;
 
   const files = data.files.map(file => ({
     ...file,
@@ -249,36 +274,37 @@ export async function list (
   return {...data, files};
 }
 
-type FileUploadPath = {
-  /** Path to where the file should be uploaded. (e.g. `"images/img1.jpg"`) */
+export type FileUploadPath = {
+  /** Path to where the file should be uploaded (e.g. `"images/img1.jpg"`) */
   uploadPath: string;
 };
 
-export type RawDataFileDetails = FileUploadPath & {
+export type UploadableFileRawData = FileUploadPath & {
   /**
-   * Raw file data.
+   * Raw file data
    *
-   * Probably a Uint8Array in most cases. Can be a UTF-8 string if plaintext.
+   * Probably a `Uint8Array` in most cases.
+   * Can be a UTF-8 `string` if plaintext.
    */
   data: BlobPart;
 };
 
-export type LocalPathFileDetails = FileUploadPath & {
+export type UploadableFileLocalPath = FileUploadPath & {
   /**
-   * Local path (can be relative to CWD) to the file.
-   * 
-   * Using this option requires `--allow-read` permission for the file's path.
+   * Local path to the file
+   *
+   * Requires permission `--allow-read` for the provided path.
    */
   localPath: string;
 };
 
-export type UploadableFileDetails = LocalPathFileDetails | RawDataFileDetails;
+export type UploadableFile = UploadableFileLocalPath | UploadableFileRawData;
 export type UploadFilesResponse = APIResponseWithMessage;
 
 /** Upload one or more files */
 export async function uploadFiles (
   token: string,
-  files: UploadableFileDetails[],
+  files: UploadableFile[],
 ): Promise<UploadFilesResponse> {
   const form = new FormData();
 
@@ -301,32 +327,48 @@ export async function uploadFiles (
   return response.json() as Promise<UploadFilesResponse>;
 }
 
-export class NeoCitiesAPI {
-  constructor (readonly token: string) {}
+export class NeocitiesAPI {
+  #token: string;
+
+  constructor (token: string) {
+    this.#token = token;
+  }
+
+  static async createFromCredentials (
+    username: string,
+    password: string,
+  ): Promise<NeocitiesAPI> {
+    const token = await getToken(username, password);
+    return new this(token);
+  }
 
   /** Delete one or more paths (files/directories) */
-  delete (fileNames: string[]): Promise<DeleteFilesResponse> {
-    return deleteFiles(this.token, fileNames);
+  delete (paths: string[]): Promise<DeleteFilesResponse> {
+    return deleteFiles(this.#token, paths);
   }
 
   /** Get info about your site */
   info (): Promise<InfoResponse>;
+
   /** Get info about the named site */
   info (siteName: string): Promise<InfoResponse>;
+
   info (siteName?: string): Promise<InfoResponse> {
-    return info(this.token, siteName as string);
+    return getSiteInfo(this.#token, siteName as string);
   }
 
   /** Get a list of all files for your site */
   list (): Promise<ListResponse>;
-  /** Get a list of files for a path in your site */
-  list (path: string): Promise<ListResponse>;
-  list (path?: string): Promise<ListResponse> {
-    return list(this.token, path as string);
+
+  /** Get a list of files in the provided directory path in your site */
+  list (directoryPath: string): Promise<ListResponse>;
+
+  list (directoryPath?: string): Promise<ListResponse> {
+    return listFiles(this.#token, directoryPath as string);
   }
 
   /** Upload one or more files */
-  upload (files: UploadableFileDetails[]): Promise<UploadFilesResponse> {
-    return uploadFiles(this.token, files);
+  upload (files: UploadableFile[]): Promise<UploadFilesResponse> {
+    return uploadFiles(this.#token, files);
   }
 }
