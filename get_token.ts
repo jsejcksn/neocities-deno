@@ -1,5 +1,6 @@
-import {exitWithMessages, prompt} from './utils/mod.ts';
-import {API_ORIGIN, getToken} from './mod.ts';
+import {API_ORIGIN} from './src/core.ts';
+import {exitWithMessages, prompt} from './src/utils.ts';
+import {getToken} from './mod.ts';
 
 async function main () {
   console.log(`Provide your neocities username and password to obtain your API key:`);
