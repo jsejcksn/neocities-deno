@@ -1,9 +1,5 @@
-import {assert, DateTime} from './deps.ts';
-
-/** Parses an RFC 2822-formatted datetime string and returns a `Date` */
-function dateFromRFC2822 (dateTimeString: string): Date {
-  return DateTime.fromRFC2822(dateTimeString).toJSDate();
-}
+import {assert} from './deps.ts';
+import {getDateFromRFC2822} from './utils/mod.ts';
 
 export const API_ORIGIN = 'https://neocities.org';
 
@@ -192,9 +188,9 @@ export async function getSiteInfo (
     ...data,
     info: {
       ...data.info,
-      created_at: dateFromRFC2822(data.info.created_at),
+      created_at: getDateFromRFC2822(data.info.created_at),
       last_updated: typeof data.info.last_updated === 'string' ?
-        dateFromRFC2822(data.info.last_updated)
+        getDateFromRFC2822(data.info.last_updated)
         : null,
     },
   };
@@ -268,7 +264,7 @@ export async function listFiles (
 
   const files = data.files.map(file => ({
     ...file,
-    updated_at: dateFromRFC2822(file.updated_at),
+    updated_at: getDateFromRFC2822(file.updated_at),
   }));
 
   return {...data, files};
