@@ -385,9 +385,9 @@ listResult = await listFiles(token, 'test');
 const rawFileData = 'hello everyone';
 const uploadPath = 'test/hello-everyone.txt';
 const files: UploadableFile[] = [{data: rawFileData, uploadPath}];
-const uploadResult = await uploadFiles(files);
+const uploadResult = await uploadFiles(token, files);
 
 // delete
 const filePathsToDelete = files.map(({uploadPath}) => uploadPath);
-const deleteResult = await deleteFiles(filePathsToDelete);
+const deleteResult = await deleteFiles(token, filePathsToDelete);
 ```
