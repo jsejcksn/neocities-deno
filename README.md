@@ -344,3 +344,50 @@ console.log(await api.list('test'));
 > ```
 
 > You can also delete an entire directory at once, instead of specifying lots of files to delete. Again, be careful!
+
+
+## Functional programming
+
+All of the examples above used an instance of the `NeocitiesAPI` stateful class, created from an API token which was used implicitly in each method call.
+
+If you prefer a functional approach, you can use the functional form of each of the class methods, which are also exported:
+
+> If you review the source code, you'll see that the class actually just uses these functions:
+
+```ts
+import {
+  deleteFiles,
+  getSiteInfo,
+  getToken,
+  listFiles,
+  uploadFiles,
+  type UploadableFile,
+} from 'https://deno.land/x/neocities@v0.1.0/mod.ts';
+
+// declare const username: string;
+// declare const password: string;
+
+// get a token using credentials
+const token = await getToken(username, password);
+
+// All of the functional forms accept a token as the first argument,
+// otherwise, they are identical to the class methods:
+
+// info
+let infoResult = await getSiteInfo(token);
+infoResult = await getSiteInfo(token, 'kyledrake');
+
+// list
+let listResult = await listFiles(token);
+listResult = await listFiles(token, 'test');
+
+// upload
+const rawFileData = 'hello everyone';
+const uploadPath = 'test/hello-everyone.txt';
+const files: UploadableFile[] = [{data: rawFileData, uploadPath}];
+const uploadResult = await uploadFiles(files);
+
+// delete
+const filePathsToDelete = files.map(({uploadPath}) => uploadPath);
+const deleteResult = await deleteFiles(filePathsToDelete);
+```
