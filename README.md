@@ -216,7 +216,7 @@ You can upload it by referencing its local path on your device, and the path to 
 ```ts
 // Upload one or more files by local path
 
-import {type UploadableFile} from '../mod.ts';
+import {type UploadableFile} from 'https://deno.land/x/neocities@v0.1.0/mod.ts';
 
 const files: UploadableFile[] = [
   {
@@ -238,7 +238,7 @@ You can also upload raw file data if you want to upload something that doesn't e
 ```ts
 // Upload one or more files as raw data
 
-import {type UploadableFile} from '../mod.ts';
+import {type UploadableFile} from 'https://deno.land/x/neocities@v0.1.0/mod.ts';
 
 const hello2FileData = `hello other planets, too!`;
 
@@ -261,14 +261,12 @@ console.log(uploadResult);
 > - files on your device, using local paths
 > - files created from raw data
 
-Even though the response indicated that the uploads succeeded, you can check to actually see it, by using the `list` method from above with the `"test"` directory path that they were uploaded to:
+Even though the responses indicated that the uploads were successful, you can check to see the changes by using the `list` method from above with the `"test"` directory path that they were uploaded to:
 
 ```ts
 const listResult = await api.list('test');
 console.log(listResult);
 ```
-
-> Success confirmed:
 
 > ```
 > {
