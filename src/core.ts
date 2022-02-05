@@ -1,3 +1,5 @@
+import {asURL} from './utils/mod.ts';
+
 export const API_ORIGIN = 'https://neocities.org';
 
 export enum APIRoute {
@@ -81,4 +83,10 @@ export async function fetchResponse (request: Request): Promise<Response> {
   }
 
   return response;
+}
+
+export async function getFileData (source: string | URL): Promise<ArrayBuffer> {
+  const request = new Request(asURL(source).href);
+  const response = await fetchResponse(request);
+  return response.arrayBuffer();
 }

@@ -1,5 +1,5 @@
 import {API_ORIGIN} from './src/core.ts';
-import {exitWithMessages, prompt} from './src/utils.ts';
+import {exitWithMessages, prompt} from './src/utils/mod.ts';
 import {getToken} from './mod.ts';
 
 async function main () {

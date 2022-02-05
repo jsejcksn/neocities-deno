@@ -1,5 +1,5 @@
 import {assert} from '../deps.ts';
-import {getDateFromRFC2822} from './utils.ts';
+import {getDateFromRFC2822, type OrPromise} from './utils/mod.ts';
 import {
   API_ORIGIN,
   APIRoute,
@@ -12,6 +12,7 @@ import {
 export {
   type APIResponse,
   type APIResponseWithMessage,
+  type OrPromise,
 };
 
 /**
@@ -210,7 +211,7 @@ export type UploadableFileRawData = FileUploadPath & {
    * Probably a `Uint8Array` in most cases.
    * Can be a UTF-8 `string` if plaintext.
    */
-  data: BlobPart;
+  data: OrPromise<BlobPart>;
 };
 
 export type UploadableFileLocalPath = FileUploadPath & {
@@ -234,7 +235,7 @@ export async function uploadFiles (
 
   for (const file of files) {
     if ('data' in file) {
-      form.append(file.uploadPath, new Blob([file.data]));
+      form.append(file.uploadPath, new Blob([await file.data]));
       continue;
     }
 
