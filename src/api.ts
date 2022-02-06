@@ -1,9 +1,14 @@
 import {assert} from '../deps.ts';
-import {getDateFromRFC2822, type OrPromise} from './utils/mod.ts';
+import {
+  getDateFromRFC2822,
+  hasNonNullPropertyValue,
+  type OrPromise,
+} from './utils/mod.ts';
 import {
   API_ORIGIN,
   APIRoute,
   createRequest,
+  getFileData,
   fetchResponse,
   type APIResponse,
   type APIResponseWithMessage,
@@ -205,25 +210,22 @@ export type FileUploadPath = {
 };
 
 export type UploadableFileRawData = FileUploadPath & {
-  /**
-   * Raw file data
-   *
-   * Probably a `Uint8Array` in most cases.
-   * Can be a UTF-8 `string` if plaintext.
-   */
+  /** Raw file data */
   data: OrPromise<BlobPart>;
 };
 
-export type UploadableFileLocalPath = FileUploadPath & {
+export type UploadableFileSource = FileUploadPath & {
   /**
-   * Local path to the file
+   * Path or URL of the source file to be uploaded
    *
-   * Requires permission `--allow-read` for the provided path.
+   * (Deno-only)
+   * Requires permission `--allow-read` for local files,
+   * and `--allow-net` for remote files.
    */
-  localPath: string;
+  source: string | URL;
 };
 
-export type UploadableFile = UploadableFileLocalPath | UploadableFileRawData;
+export type UploadableFile = UploadableFileSource | UploadableFileRawData;
 export type UploadFilesResponse = APIResponseWithMessage;
 
 /** Upload one or more files */
@@ -234,13 +236,13 @@ export async function uploadFiles (
   const form = new FormData();
 
   for (const file of files) {
-    if ('data' in file) {
-      form.append(file.uploadPath, new Blob([await file.data]));
-      continue;
-    }
+    const blobPart = await (
+      hasNonNullPropertyValue<UploadableFileRawData>(file, 'data') ?
+        file.data
+        : getFileData(file.source)
+    );
 
-    const data = await Deno.readFile(file.localPath);
-    form.append(file.uploadPath, new Blob([data]));
+    form.append(file.uploadPath, new Blob([blobPart]));
   }
 
   const request = createRequest(token, APIRoute.Upload, {
