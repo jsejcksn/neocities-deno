@@ -9,7 +9,7 @@ export type OrPromise<T> = T | Promise<T>;
 // deno-lint-ignore no-explicit-any
 export const isDeno = typeof (globalThis as any).Deno === 'object';
 
-/** Terminate the program after printing one or more messages */
+/** Terminate the Deno program after printing one or more messages */
 export function exitWithMessages (code: number, ...messages: string[]): never {
   for (const msg of messages) console[code === 0 ? 'log' : 'error'](msg);
   Deno.exit(code);
