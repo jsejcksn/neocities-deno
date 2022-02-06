@@ -56,3 +56,10 @@ export function asURL (input: string | URL, options?: AsURLOptions): URL {
 
   return new URL(input, baseUrl);
 }
+
+export function hasNonNullPropertyValue <T>(
+  value: Record<PropertyKey, unknown>,
+  key: keyof T,
+): value is Record<typeof key, NonNullable<T[typeof key]>> {
+  return key in value && typeof value[key] != null;
+}
