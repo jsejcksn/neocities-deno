@@ -3,8 +3,6 @@ import {path} from '../../deps.ts';
 export {confirm, prompt} from './prompt.ts';
 export {getDateFromRFC2822} from './datetime.ts';
 
-export type OrPromise<T> = T | Promise<T>;
-
 /** https://github.com/denoland/manual/pull/213#issuecomment-1026456953 */
 // deno-lint-ignore no-explicit-any
 export const isDeno = typeof (globalThis as any).Deno === 'object';

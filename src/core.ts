@@ -1,4 +1,5 @@
 import {asURL} from './utils/mod.ts';
+import type {APIErrorResponse} from './types.d.ts';
 
 export const API_ORIGIN = 'https://neocities.org';
 
@@ -9,13 +10,6 @@ export enum APIRoute {
   List = '/api/list',
   Upload = '/api/upload',
 }
-
-export type APIResponse<T> = T & { result: string; };
-
-export type APIResponseWithMessage<T = unknown> =
-  APIResponse<T> & { message: string; };
-
-type APIErrorResponse = APIResponseWithMessage<{error_type: string}>;
 
 export class FetchError extends Error {
   name = 'FetchError';

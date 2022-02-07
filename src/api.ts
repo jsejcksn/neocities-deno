@@ -2,23 +2,25 @@ import {assert} from '../deps.ts';
 import {
   getDateFromRFC2822,
   hasNonNullPropertyValue,
-  type OrPromise,
 } from './utils/mod.ts';
 import {
   API_ORIGIN,
   APIRoute,
   createRequest,
-  getFileData,
   fetchResponse,
-  type APIResponse,
-  type APIResponseWithMessage,
+  getFileData,
 } from './core.ts';
+import type {
+  APIResponse,
+  DeleteFilesResponse,
+  FSEntryDatesRFC2822,
+  InfoResponse,
+  InfoResponseDatesRFC2822,
+  ListResponse,
+  UploadFilesResponse,
+} from './types.d.ts';
 
-export {
-  type APIResponse,
-  type APIResponseWithMessage,
-  type OrPromise,
-};
+export type OrPromise<T> = T | Promise<T>;
 
 /**
  * Get the API key (token) for your account
@@ -43,8 +45,6 @@ export async function getToken (
   return token;
 }
 
-export type DeleteFilesResponse = APIResponseWithMessage;
-
 /** Delete one or more paths (files/directories) */
 export async function deleteFiles (
   token: string,
@@ -64,38 +64,6 @@ export async function deleteFiles (
   const response = await fetchResponse(request);
   return response.json() as Promise<DeleteFilesResponse>;
 }
-
-type InfoResponseDatesRFC2822 = {
-  /** RFC 2822 datetime */
-  created_at: string;
-
-  /** RFC 2822 datetime */
-  last_updated: string | null;
-};
-
-export type InfoResponseDatesNative = {
-  created_at: Date;
-  last_updated: Date | null;
-};
-
-export type InfoResponse<DateInfo extends (
-  | InfoResponseDatesRFC2822
-  | InfoResponseDatesNative
-) = InfoResponseDatesNative> = APIResponse<{
-  info: DateInfo & {
-    domain: string | null;
-
-    /** integer */
-    hits: number;
-
-    latest_ipfs_hash: string | null;
-    sitename: string;
-    tags: string[];
-
-    /** integer */
-    views: number;
-  }
-}>;
 
 /** Get info about your site */
 export async function getSiteInfo (token: string): Promise<InfoResponse>;
@@ -129,51 +97,6 @@ export async function getSiteInfo (
     },
   };
 }
-
-type FSEntryDatesRFC2822 = {
-  /** RFC 2822 datetime */
-  updated_at: string;
-};
-
-export type FSEntryDatesNative = {
-  updated_at: Date;
-};
-
-export type FileWithDateInfo<DateInfo extends (
-  | FSEntryDatesRFC2822
-  | FSEntryDatesNative
-) = FSEntryDatesNative> = DateInfo & {
-  is_directory: false;
-  path: string;
-  sha1_hash: string | null;
-
-  /** integer (bytes) */
-  size: number;
-};
-
-export type DirectoryWithDateInfo<DateInfo extends (
-  | FSEntryDatesRFC2822
-  | FSEntryDatesNative
-) = FSEntryDatesNative> = DateInfo & {
-  is_directory: true;
-  path: string;
-};
-
-export type FileOrDir<DateInfo extends (
-  | FSEntryDatesRFC2822
-  | FSEntryDatesNative
-) = FSEntryDatesNative> = (
-  | FileWithDateInfo<DateInfo>
-  | DirectoryWithDateInfo<DateInfo>
-);
-
-export type ListResponse<
-  DateInfo extends (
-    | FSEntryDatesRFC2822
-    | FSEntryDatesNative
-  ) = FSEntryDatesNative,
-  FSEntry = FileOrDir<DateInfo>,
-> = APIResponse<{ files: FSEntry[]; }>;
 
 /** Get a list of all files for your site */
 export async function listFiles (token: string): Promise<ListResponse>;
@@ -226,7 +149,6 @@ export type UploadableFileSource = FileUploadPath & {
 };
 
 export type UploadableFile = UploadableFileSource | UploadableFileRawData;
-export type UploadFilesResponse = APIResponseWithMessage;
 
 /** Upload one or more files */
 export async function uploadFiles (
